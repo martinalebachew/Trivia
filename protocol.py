@@ -28,8 +28,12 @@ class Error:
         class MessageValidationError(Exception):
             pass
 
-    class Client(Exception):
-        pass
+    class Client:
+        class ConnectionFailed(Exception):
+            pass
+
+        class UnexpectedResponse(Exception):
+            pass
 
     class Server:
         class InvalidArgs(Exception):
@@ -100,7 +104,7 @@ def build_message(code, *fields) -> str:
     :param code: message code
     :param fields: additional fields
     :type code: str
-    :type fields: str
+    :type fields: Union[str, int]
     :return: validated message string
     :raises UnknownMessageCode: if message code is not defined in protocol
     """
