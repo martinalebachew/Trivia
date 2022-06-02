@@ -84,6 +84,19 @@ class Message:
         self.code = code
         self.fields = fields
 
+    def __eq__(self, other):
+        if not isinstance(other, Message):
+            return NotImplemented
+
+        if len(self.fields) != len(other.fields) or self.code != other.code:
+            return False
+
+        for i in range(0, len(self.fields)):
+            if self.fields[i] != other.fields[i]:
+                return False
+
+        return True
+
 
 # Protocol-wide functions
 def log(conn, info) -> None:
@@ -117,7 +130,9 @@ def build_message(code, *fields) -> str:
         msg += "~" + str(field)
 
     # Return validated message
-    if break_message(msg) == (code, [str(field) for field in fields]):
+    a = break_message(msg)
+    b = Message(code, [str(field) for field in fields])
+    if a == b:
         return msg
     raise Error.Protocol.MessageValidationError
 
@@ -170,3 +185,11 @@ def recv_message(sock, conn, timeout=TIMEOUT) -> (str, list[str]):
     msg = sock.recv(BUFF).decode()
     log(conn, f"<<<<< {msg}")
     return break_message(msg)
+
+
+def main():
+    x = build_message("I", "galwhawhy")
+
+
+if __name__ == "__main__":
+    main()
