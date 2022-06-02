@@ -32,6 +32,32 @@ class Error:
         pass
 
 
+class Question:
+    def __init__(self, q, a1, a2, a3, a4, c):
+        """
+        Represents a question, its available answers and chosen answer.
+
+        :param q: question string
+        :param a1: first answer
+        :param a2: second answer
+        :param a3: third answer
+        :param a4: fourth answer
+        :param c: correct answer number (1-4)
+        :type q: str
+        :type a1: str
+        :type a2: str
+        :type a3: str
+        :type a4: str
+        :type c: int
+        """
+        self.q = q
+        self.a1 = a1
+        self.a2 = a2
+        self.a3 = a3
+        self.a4 = a4
+        self.c = c
+
+
 # Protocol-wide functions
 def log(conn, info) -> None:
     """
