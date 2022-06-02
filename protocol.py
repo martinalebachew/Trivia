@@ -50,6 +50,7 @@ class Question:
         :type a4: str
         :type c: int
         """
+
         self.q = q
         self.a1 = a1
         self.a2 = a2
