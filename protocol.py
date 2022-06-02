@@ -22,14 +22,21 @@ class Error:
         class UnknownMessageCode(Exception):
             pass
 
+        class UnknownTopic(Exception):
+            pass
+
         class MessageValidationError(Exception):
             pass
 
     class Client(Exception):
         pass
 
-    class Server(Exception):
-        pass
+    class Server:
+        class InvalidArgs(Exception):
+            pass
+
+        class NotEnoughQuestions(Exception):
+            pass
 
 
 class Question:
@@ -57,6 +64,21 @@ class Question:
         self.a3 = a3
         self.a4 = a4
         self.c = c
+
+
+class Message:
+    def __init__(self, code, fields=None):
+        """
+        Represents a single message of any code, according to protocol.
+
+        :param code: message code
+        :param fields: additional fields
+        :type code: str
+        :type fields: list[str]
+        """
+
+        self.code = code
+        self.fields = fields
 
 
 # Protocol-wide functions
@@ -105,11 +127,11 @@ def break_message(msg) -> (str, list[str]):
     :raises UnknownMessageCode: if message code is not defined in protocol
     """
 
-    msg = msg.split("~")
-    code = msg.pop(0)
+    fields = msg.split("~")
+    code = fields.pop(0)
     if code not in MSG_CODES:
         raise Error.Protocol.UnknownMessageCode
-    return code, msg
+    return Message(code, fields)
 
 
 def send_message(sock, conn, msg) -> None:
