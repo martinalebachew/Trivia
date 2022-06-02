@@ -125,15 +125,15 @@ class ServerThread(StoppableThread):
                         break
 
             else:
-                log(self.cid, f"Expected \"S\" query, instead got \"{msg[0]}\". Closing connection.")
+                log(self.cid, f"Expected \"S\" query, instead got \"{msg.code}\". Closing connection.")
                 self.sock.close()
 
         else:
-            log(self.cid, f"Expected \"I\" query, instead got \"{msg[0]}\". Closing connection.")
+            log(self.cid, f"Expected \"I\" query, instead got \"{msg.code}\". Closing connection.")
             self.sock.close()
 
 
-# Server functions
+# Server static functions
 def recv_f(tid, target, correct) -> None:
     """
     Simple target function to get answer from user and add score accordingly.
