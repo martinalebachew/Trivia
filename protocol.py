@@ -183,11 +183,3 @@ def recv_message(sock, conn, timeout=TIMEOUT) -> (str, list[str]):
     msg = sock.recv(BUFF).decode()
     log(conn, f"<<<<< {msg}")
     return break_message(msg)
-
-
-def main():
-    x = build_message("I", "galwhawhy")
-
-
-if __name__ == "__main__":
-    main()
