@@ -130,9 +130,7 @@ def build_message(code, *fields) -> str:
         msg += "~" + str(field)
 
     # Return validated message
-    a = break_message(msg)
-    b = Message(code, [str(field) for field in fields])
-    if a == b:
+    if break_message(msg) == Message(code, [str(field) for field in fields]):
         return msg
     raise Error.Protocol.MessageValidationError
 
