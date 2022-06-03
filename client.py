@@ -2,7 +2,6 @@
 # By Martin Alebachew
 # CLIENT.PY
 # #####
-
 import math
 import random
 import socket
