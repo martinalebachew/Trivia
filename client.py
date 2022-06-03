@@ -175,6 +175,73 @@ class TextboxMgr:
         self.blit()
 
 
+class MatchThread(StoppableThread):
+    def __init__(self, gui, sock, msg):
+        self.sock = sock
+        self.msg = msg
+        self.gui = gui
+        super().__init__(self.conn_f)  # Initialize a Stoppable Thread with conn_f as target function
+
+    def conn_f(self) -> None:
+        """
+        Thread target function to request a match and update the displayed counter.
+
+        :param sock: connected socket
+        :param msg: message string
+        :type sock: socket.socket
+        :type msg: str
+        """
+
+        retry = True
+
+        while retry:
+            send_message(self.sock, SID, self.msg)
+            rsp = recv_message(self.sock, SID, 2 * TIMEOUT)
+            # TODO: FIX TIMEOUT
+            # TODO: STUCK IN RECV
+
+            if rsp.code == "Q":
+                retry = False
+                self.gui.qrsp = rsp
+                self.gui.against = rsp.fields[5]
+                self.gui.state = "question_flag"  # Flag main thread to load a question
+
+            elif rsp.code == "N":
+                wait = int(rsp.fields[0])
+                font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+                text = font.render(f"{wait}...", True, (255, 255, 255))
+                self.gui.play_on_vid["match_seconds_counter"] = (text, (10, 670))
+
+                while wait > 0:
+                    for i in range(0, 100):
+                        sleep(0.01)
+                        msg = recv_message(self.sock, SID, 0.001)
+                        if msg and msg.code == "Q":
+                            self.gui.qrsp = msg
+                            self.gui.against = msg.fields[5]
+                            self.gui.state = "question_flag"  # Flag main thread to load a question
+                            return
+
+                    if self.stopped():
+                        send_message(self.sock, SID, build_message("C"))
+                        retry = False
+                        break
+                    else:
+                        wait -= 1
+                        font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+                        text = font.render(f"{wait}...", True, (255, 255, 255))
+                        self.gui.play_on_vid["match_seconds_counter"] = (text, (10, 670))
+
+                sleep(1)
+
+            else:
+                retry = False
+                print(f"Client expected \"Q\" or \"N\" message from server,"
+                      f"instead got \"{rsp.code}\" response. Loading error screen...")
+                self.sock.close()
+                self.gui.raise_error()
+
+
 class Gui:
     """ GUI Manager Class """
     def __init__(self):
@@ -194,6 +261,8 @@ class Gui:
         self.sock = None
         self.name = random_name()
         self.ip = "127.0.0.1"
+
+        self.conn_t = None  # Match searching thread
 
         self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
         self.state = None  # [Mainloop] Program's logic variable - current state tracker
@@ -228,52 +297,6 @@ class Gui:
         """
 
         self.ip = addr
-
-    def conn_f(self, sock, msg) -> None:
-        """
-        Thread target function to request a match and update the displayed counter.
-
-        :param sock: connected socket
-        :param msg: message string
-        :type sock: socket.socket
-        :type msg: str
-        """
-
-        retry = True
-
-        while retry:
-            send_message(sock, SID, msg)
-            rsp = recv_message(sock, SID, 2*TIMEOUT)
-            # TODO: FIX TIMEOUT
-            # TODO: STUCK IN RECV
-
-            if rsp.code == "Q":
-                retry = False
-                self.qrsp = rsp
-                self.against = rsp.fields[5]
-                self.state = "question_flag"  # Flag main thread to load a question
-
-            elif rsp.code == "N":
-                wait = int(rsp.fields[0])
-                font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
-                text = font.render(f"{wait}...", True, (255, 255, 255))
-                self.play_on_vid["match_seconds_counter"] = (text, (10, 670))
-
-                while wait > 0:
-                    sleep(1)
-                    wait -= 1
-                    font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
-                    text = font.render(f"{wait}...", True, (255, 255, 255))
-                    self.play_on_vid["match_seconds_counter"] = (text, (10, 670))
-
-                sleep(1)
-
-            else:
-                retry = False
-                print(f"Client expected \"Q\" or \"N\" message from server,"
-                      f"instead got \"{rsp.code}\" response. Loading error screen...")
-                sock.close()
-                self.raise_error()
 
     def raise_error(self) -> None:
         """
@@ -423,8 +446,19 @@ class Gui:
                 print("Connection established. Requesting match...")
 
                 # Start another thread to handle connection and update counter
-                conn_t = threading.Thread(target=self.conn_f, args=(self.sock, msg))
-                conn_t.start()
+                self.conn_t = MatchThread(self, self.sock, msg)
+                self.conn_t.start()
+
+    def handle_mouse_click_on_match(self):
+        x, y = pygame.mouse.get_pos()
+
+        if 478 < x < 602 and 633 < y < 677:  # If user clicked on cancel button
+            # Stop looking for a match and alert the server
+            self.conn_t.stop()
+
+            # Load topics screen
+            self.stop_video()
+            self.load_topics_screen()
 
     def load_next_question(self) -> None:
         """
@@ -645,6 +679,9 @@ class Gui:
 
                         elif self.state == "sharon":
                             self.handle_mouse_click_on_sharon()
+
+                        elif self.state == "match":
+                            self.handle_mouse_click_on_match()
 
                 elif event.type == pygame.KEYDOWN:  # Handle typing
                     if self.state == "settings-name-tb":

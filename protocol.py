@@ -2,6 +2,8 @@
 # By Martin Alebachew
 # PROTOCOL.PY
 # #####
+import socket
+import threading
 
 # Protocol-wide settings
 PORT = 15999  # Protocol port
@@ -98,6 +100,36 @@ class Message:
         return True
 
 
+class StoppableThread(threading.Thread):
+    def __init__(self, target):
+        """
+        Thread class with a stop() method. The target function has to
+        check regularly for the stopped() condition.
+
+        :param target: target function
+        :type target: function
+        """
+
+        super().__init__(target=target)  # Initialize a threading.Thread object with passed target function
+        self._stop_event = threading.Event()  # Create a stop flag event
+
+    def stop(self) -> None:
+        """
+        Raise stop flag for the thread.
+        """
+
+        self._stop_event.set()
+
+    def stopped(self) -> bool:
+        """
+        Check if stop flag has been raised.
+
+        :return: True if it has been raised, False otherwise.
+        """
+
+        return self._stop_event.is_set()
+
+
 # Protocol-wide functions
 def log(conn, info) -> None:
     """
@@ -144,6 +176,9 @@ def break_message(msg) -> (str, list[str]):
     :raises UnknownMessageCode: if message code is not defined in protocol
     """
 
+    if msg == "":
+        return None
+
     fields = msg.split("~")
     code = fields.pop(0)
     if code not in MSG_CODES:
@@ -167,7 +202,7 @@ def send_message(sock, conn, msg) -> None:
     log(conn, f">>>>> {msg}")
 
 
-def recv_message(sock, conn, timeout=TIMEOUT) -> (str, list[str]):
+def recv_message(sock, conn, timeout=TIMEOUT):
     """
     Receives a message from a given socket and logs it.
 
@@ -176,10 +211,14 @@ def recv_message(sock, conn, timeout=TIMEOUT) -> (str, list[str]):
     :param timeout: socket recv timeout
     :type sock: socket.socket
     :type conn: str
-    :type timeout: int
+    :type timeout: Union[float, int]
     """
 
     sock.settimeout(timeout)
-    msg = sock.recv(BUFF).decode()
+    try:
+        msg = sock.recv(BUFF).decode()
+    except TimeoutError:
+        return None
+
     log(conn, f"<<<<< {msg}")
     return break_message(msg)

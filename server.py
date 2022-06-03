@@ -42,36 +42,6 @@ class Client:
         self.thread = thread
 
 
-class StoppableThread(threading.Thread):
-    def __init__(self, target):
-        """
-        Thread class with a stop() method. The target function has to
-        check regularly for the stopped() condition.
-
-        :param target: target function
-        :type target: function
-        """
-
-        super().__init__(target=target)  # Initialize a threading.Thread object with passed target function
-        self._stop_event = threading.Event()  # Create a stop flag event
-
-    def stop(self) -> None:
-        """
-        Raise stop flag for the thread.
-        """
-
-        self._stop_event.set()
-
-    def stopped(self) -> bool:
-        """
-        Check if stop flag has been raised.
-
-        :return: True if it has been raised, False otherwise.
-        """
-
-        return self._stop_event.is_set()
-
-
 class ServerThread(StoppableThread):
     def __init__(self, sock, addr, cid):
         """
@@ -103,6 +73,8 @@ class ServerThread(StoppableThread):
             send_message(self.sock, self.cid, build_message("W"))  # Send welcome message
 
             msg = recv_message(self.sock, self.cid)  # Get 'S' message (search for game)
+            topic = None
+
             while msg.code == "S":
                 if self.stopped():  # check if another thread is managing the game
                     """
@@ -117,6 +89,7 @@ class ServerThread(StoppableThread):
                 else:  # search for match
                     client = Client(name, self.sock, self.addr, self.cid, self)
                     match = match_clients(msg.fields[0], client)
+                    topic = msg.fields[0]  # Save the topic which contains client in the waiting list
 
                     if not match:
                         msg = recv_message(self.sock, self.cid, TIMEOUT + DW)  # TODO: FIX TIMEOUT
@@ -125,8 +98,22 @@ class ServerThread(StoppableThread):
                         break
 
             else:
-                log(self.cid, f"Expected \"S\" query, instead got \"{msg.code}\". Closing connection.")
-                self.sock.close()
+                if msg.code == "C":
+                    log(self.cid, f"Client canceled game. Closing connection.")
+
+                    if topic:  # Remove client from waiting list
+                        with lock:
+                            for i in range(0, len(waitlist[topic])):
+                                c = waitlist[topic][i]
+
+                                if c.addr == self.addr:
+                                    waitlist[topic].pop(i)
+
+                    self.sock.close()
+
+                else:
+                    log(self.cid, f"Expected \"S\" query, instead got \"{msg.code}\". Closing connection.")
+                    self.sock.close()
 
         else:
             log(self.cid, f"Expected \"I\" query, instead got \"{msg.code}\". Closing connection.")
@@ -249,7 +236,6 @@ def match_clients(topic, client) -> Union[Client, None]:
         else:
             # stop other thread and return the other client object
             match.thread.stop()
-            match.thread.join()  # TODO: CHECK IF BLOCKING GAME START
             return match
 
 
