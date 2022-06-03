@@ -12,7 +12,6 @@ import socket
 from time import sleep
 import cv2
 import pygame
-import pygame_menu
 
 # Client constants
 SID = "S"  # Server representation in logs
@@ -183,18 +182,7 @@ class Gui:
         icon = pygame.image.load("assets/pictures/icon.png")
         pygame.display.set_icon(icon)
 
-        #   Settings menu
-        print("Loading menu...")
-        menu = pygame_menu.Menu('Trivia Settings', 400, 300,
-                                theme=pygame_menu.themes.THEME_BLUE)
-
-        menu.add.text_input('Name: ', default=self.name, onchange=self.set_name)
-        menu.add.text_input('IP: ', default='127.0.0.1', onchange=self.set_ip)
-        menu.add.button('Play', self.load_welcome)
-
-        print("Loaded. Waiting for user...")
-
-        menu.mainloop(self.screen)
+        self.load_welcome()
 
     def set_name(self, name) -> None:
         """
@@ -372,8 +360,6 @@ class Gui:
         self.screen.blit(text, (900, 680))
 
         print("Loaded. Waiting for user...")
-        self.run()
-        # TODO: do not call run method
 
     def load_topics_screen(self) -> None:
         """
@@ -502,7 +488,8 @@ class Gui:
 
 
 def main():
-    Gui()
+    gui = Gui()
+    gui.run()
 
 
 if __name__ == "__main__":
