@@ -3,15 +3,17 @@
 # CLIENT.PY
 # #####
 
-from protocol import *
-from typing import Union
 import math
 import random
-import threading
 import socket
+import threading
 from time import sleep
+from typing import Union
+
 import cv2
 import pygame
+
+from protocol import *
 
 # Client constants
 SID = "S"  # Server representation in logs
