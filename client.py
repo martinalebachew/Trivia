@@ -49,7 +49,8 @@ def click_in_bounds(pos) -> Union[str, None]:
     if 170 < pos[1] < 396 or 436 < pos[1] < 662:
 
         # Find the closest circle center and check if click is in circle (radius comparison)
-        centers = [(239, 270), (540, 270), (841, 270), (239, 536), (540, 536), (841, 536)]
+        centers = [(239, 270), (540, 270), (841, 270),
+                   (239, 536), (540, 536), (841, 536)]
         min_v = int(line_length(centers[0], pos))
         min_i = 0
 
@@ -148,7 +149,8 @@ def random_name() -> str:
              "Skipper", "Lobster", "Chum", "Snake", "Kitty", "Focker", "Senorita", "Dolly", "SleepingBeauty", "Cat",
              "Spud", "Grease", "Pickle"]
 
-    return names[random.randint(0, len(names) - 1)]  # Return a random name from the list above
+    # Return a random name from the list above
+    return names[random.randint(0, len(names) - 1)]
 
 
 class TextboxMgr:
@@ -157,14 +159,16 @@ class TextboxMgr:
         self.value = value
         self.field_color = (61, 65, 118)
 
-        self.font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", fontsize)
+        self.font = pygame.font.Font(
+            "assets/fonts/Ploni/Regular.ttf", fontsize)
         self.input_rect = pygame.Rect(pos[0], pos[1], 416, 58)
 
     def blit(self):
         # Draw textbox
         pygame.draw.rect(self.screen, self.field_color, self.input_rect, 0)
         text_surface = self.font.render(self.value, True, (255, 255, 255))
-        self.screen.blit(text_surface, (self.input_rect.x + 10, self.input_rect.y + 7))
+        self.screen.blit(
+            text_surface, (self.input_rect.x + 10, self.input_rect.y + 7))
 
     def highlight(self):
         self.field_color = (134, 170, 223)
@@ -177,17 +181,21 @@ class TextboxMgr:
 
 class Gui:
     """ GUI Manager Class """
+
     def __init__(self):
         # Initialize class variables:
         self.video = None  # [Video Functionality] Video object for mainloop
         self.fps = None  # [Video Functionality] Goal fps variable for mainloop
         self.clock = None  # [Video Functionality] Clock variable for mainloop
-        self.fc = None  # [Video Functionality] Frames count variable for mainloop
+        # [Video Functionality] Frames count variable for mainloop
+        self.fc = None
         self.fm = None  # [Video Functionality] Goal fps variable for mainloop
-        self.playvid = False  # [Video Functionality] False if there's no video to play, or the video's path
+        # [Video Functionality] False if there's no video to play, or the video's path
+        self.playvid = False
         self.play_on_vid = {}  # [Video Functionality] Video overlay items
 
-        self.qrsp = None  # [Question Fetching] Temporary question response variable
+        # [Question Fetching] Temporary question response variable
+        self.qrsp = None
         self.qc = 0  # [Question Fetching] Question count variable
         self.against = None  # [Question Fetching] Rival nickname variable
 
@@ -195,8 +203,10 @@ class Gui:
         self.name = random_name()
         self.ip = "127.0.0.1"
 
-        self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
-        self.state = None  # [Mainloop] Program's logic variable - current state tracker
+        self.screen = pygame.display.set_mode(
+            SCREEN_SIZE)  # [Mainloop] Pygame screen
+        # [Mainloop] Program's logic variable - current state tracker
+        self.state = None
 
         # Initialize GUI:
         #   Application settings:
@@ -262,9 +272,11 @@ class Gui:
                 while wait > 0:
                     sleep(1)
                     wait -= 1
-                    font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+                    font = pygame.font.Font(
+                        "assets/fonts/Ploni/Regular.ttf", 40)
                     text = font.render(f"{wait}...", True, (255, 255, 255))
-                    self.play_on_vid["match_seconds_counter"] = (text, (10, 670))
+                    self.play_on_vid["match_seconds_counter"] = (
+                        text, (10, 670))
 
                 sleep(1)
 
@@ -337,36 +349,44 @@ class Gui:
         question_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 55)
         answers_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
         header_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 55)
-        large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
+        large_header_font = pygame.font.Font(
+            "assets/fonts/Ploni/Demibold.ttf", 100)
 
-        text = header_font.render(self.against + "משחק נגד "[::-1], True, (255, 255, 255))
+        text = header_font.render(
+            self.against + "משחק נגד "[::-1], True, (255, 255, 255))
         text_rect = text.get_rect()
         self.screen.blit(text, (1080-69-text_rect.width, 60))
 
         text = header_font.render(f"{self.qc}/{GL}", True, (255, 255, 255))
         self.screen.blit(text, (69, 60))
 
-        text = large_header_font.render(f"שאלה {self.qc}"[::-1], True, (255, 255, 255))
+        text = large_header_font.render(
+            f"שאלה {self.qc}"[::-1], True, (255, 255, 255))
         text_rect = text.get_rect()
         self.screen.blit(text, (1080-69-text_rect.width, 120))
 
-        text = question_font.render(self.qrsp.fields[0][::-1], True, (255, 255, 255))
+        text = question_font.render(
+            self.qrsp.fields[0][::-1], True, (255, 255, 255))
         text_rect = text.get_rect(center=(SCREEN_SIZE[0] / 2, 340))
         self.screen.blit(text, text_rect)
 
-        text = answers_font.render(self.qrsp.fields[1][::-1], True, (255, 255, 255))
+        text = answers_font.render(
+            self.qrsp.fields[1][::-1], True, (255, 255, 255))
         text_rect = text.get_rect(center=(792, 452))
         self.screen.blit(text, text_rect)
 
-        text = answers_font.render(self.qrsp.fields[2][::-1], True, (255, 255, 255))
+        text = answers_font.render(
+            self.qrsp.fields[2][::-1], True, (255, 255, 255))
         text_rect = text.get_rect(center=(289, 452))
         self.screen.blit(text, text_rect)
 
-        text = answers_font.render(self.qrsp.fields[3][::-1], True, (255, 255, 255))
+        text = answers_font.render(
+            self.qrsp.fields[3][::-1], True, (255, 255, 255))
         text_rect = text.get_rect(center=(792, 567))
         self.screen.blit(text, text_rect)
 
-        text = answers_font.render(self.qrsp.fields[4][::-1], True, (255, 255, 255))
+        text = answers_font.render(
+            self.qrsp.fields[4][::-1], True, (255, 255, 255))
         text_rect = text.get_rect(center=(289, 567))
         self.screen.blit(text, text_rect)
 
@@ -387,7 +407,8 @@ class Gui:
 
         #   Load credit text:
         font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
-        text = font.render("מרטין אלבצאו"[::-1], True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
+        # Reverse string as a workaround for RTL bug
+        text = font.render("מרטין אלבצאו"[::-1], True, (255, 255, 255))
         self.screen.blit(text, (900, 680))
 
         print("Loaded. Waiting for user...")
@@ -423,7 +444,8 @@ class Gui:
                 print("Connection established. Requesting match...")
 
                 # Start another thread to handle connection and update counter
-                conn_t = threading.Thread(target=self.conn_f, args=(self.sock, msg))
+                conn_t = threading.Thread(
+                    target=self.conn_f, args=(self.sock, msg))
                 conn_t.start()
 
     def load_next_question(self) -> None:
@@ -536,7 +558,8 @@ class Gui:
             self.namemgr.value = self.namemgr.value[:-1]
             self.namemgr.blit()
 
-        elif (event.unicode.isalpha() or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:  # TODO: REPLACE SPACE WITH UNDERSCORE
+        # TODO: REPLACE SPACE WITH UNDERSCORE
+        elif (event.unicode.isalpha() or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:
             self.namemgr.value += event.unicode
             self.namemgr.blit()
 
@@ -549,7 +572,8 @@ class Gui:
             self.ipmgr.value = self.ipmgr.value[:-1]
             self.ipmgr.blit()
 
-        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:  # TODO: REPLACE SPACE WITH UNDERSCORE
+        # TODO: REPLACE SPACE WITH UNDERSCORE
+        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:
             self.ipmgr.value += event.unicode
             self.ipmgr.blit()
 
@@ -631,10 +655,12 @@ class Gui:
                             self.handle_mouse_click_on_topic()
 
                         elif self.state == "question":
-                            ans = chosen_answer(pygame.mouse.get_pos())  # Calculate chosen answer
+                            # Calculate chosen answer
+                            ans = chosen_answer(pygame.mouse.get_pos())
 
                             if ans:
-                                send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
+                                send_message(self.sock, SID, build_message(
+                                    "A", ans))  # Send answer to server
                                 self.load_next_question()  # Load next question / game results
 
                         elif self.state.startswith("settings"):
