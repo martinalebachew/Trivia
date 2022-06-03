@@ -1,4 +1,4 @@
-# Trivia - TCP Quiz Game POC [1.0.1-alpha]
+# Trivia - TCP Quiz Game POC [1.1.0-alpha]
 # By Martin Alebachew
 # QUESTION_CREATOR.PY
 # #####
