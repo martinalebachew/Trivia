@@ -5,7 +5,7 @@ pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((800, 800))
 base_font = pygame.font.SysFont("Arial", 20)
-user_text = ''
+user_text = ""
 
 input_rect = pygame.Rect(0, 0, 800, 30)
 color = pygame.Color("lightblue")
