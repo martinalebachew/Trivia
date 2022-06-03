@@ -12,7 +12,6 @@ import socket
 from time import sleep
 import cv2
 import pygame
-import pygame_menu
 
 # Client constants
 SID = "S"  # Server representation in logs
@@ -152,6 +151,30 @@ def random_name() -> str:
     return names[random.randint(0, len(names) - 1)]  # Return a random name from the list above
 
 
+class TextboxMgr:
+    def __init__(self, screen, value="", fontsize=20, pos=(0, 0)):
+        self.screen = screen
+        self.value = value
+        self.field_color = (61, 65, 118)
+
+        self.font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", fontsize)
+        self.input_rect = pygame.Rect(pos[0], pos[1], 416, 58)
+
+    def blit(self):
+        # Draw textbox
+        pygame.draw.rect(self.screen, self.field_color, self.input_rect, 0)
+        text_surface = self.font.render(self.value, True, (255, 255, 255))
+        self.screen.blit(text_surface, (self.input_rect.x + 10, self.input_rect.y + 7))
+
+    def highlight(self):
+        self.field_color = (134, 170, 223)
+        self.blit()
+
+    def dehighlight(self):
+        self.field_color = (61, 65, 118)
+        self.blit()
+
+
 class Gui:
     """ GUI Manager Class """
     def __init__(self):
@@ -173,28 +196,22 @@ class Gui:
         self.ip = "127.0.0.1"
 
         self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
-        self.state = "welcome"  # [Mainloop] Program's logic variable - current state tracker
+        self.state = None  # [Mainloop] Program's logic variable - current state tracker
 
         # Initialize GUI:
         #   Application settings:
         print("Initializing...")
         pygame.init()
+
+        self.screen.fill((140, 82, 255))  # BG color behind textbox
+        self.namemgr = TextboxMgr(self.screen, self.name, 40, (164, 354))
+        self.ipmgr = TextboxMgr(self.screen, self.ip, 40, (164, 433))
+
         pygame.display.set_caption("Play Trivia!")
         icon = pygame.image.load("assets/pictures/icon.png")
         pygame.display.set_icon(icon)
 
-        #   Settings menu
-        print("Loading menu...")
-        menu = pygame_menu.Menu('Trivia Settings', 400, 300,
-                                theme=pygame_menu.themes.THEME_BLUE)
-
-        menu.add.text_input('Name: ', default=self.name, onchange=self.set_name)
-        menu.add.text_input('IP: ', default='127.0.0.1', onchange=self.set_ip)
-        menu.add.button('Play', self.load_welcome)
-
-        print("Loaded. Waiting for user...")
-
-        menu.mainloop(self.screen)
+        self.load_welcome_screen()
 
     def set_name(self, name) -> None:
         """
@@ -356,10 +373,12 @@ class Gui:
         self.state = "question"
         print("Loaded. Waiting for user...")
 
-    def load_welcome(self) -> None:
+    def load_welcome_screen(self) -> None:
         """
         Load welcome screen.
         """
+
+        self.state = "welcome"
 
         #   Welcome screen:
         print("Loading welcome screen...")
@@ -372,8 +391,6 @@ class Gui:
         self.screen.blit(text, (900, 680))
 
         print("Loaded. Waiting for user...")
-        self.run()
-        # TODO: do not call run method
 
     def load_topics_screen(self) -> None:
         """
@@ -387,21 +404,27 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def handle_mouse_click_on_topic(self) -> None:
-        topic = click_in_bounds(pygame.mouse.get_pos())
+        pos = pygame.mouse.get_pos()
 
-        if topic:
-            print(f"Loading match screen for topic {topic}...")
-            self.state = "match"
-            self.load_video("assets/videos/match.mp4")
-            print("Loaded. Connecting to server...")
+        if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
+            self.load_welcome_screen()
 
-            self.sock = establish_connection(self.name, ip=self.ip)
-            msg = build_message("S", topic)
-            print("Connection established. Requesting match...")
+        else:
+            topic = click_in_bounds(pos)
 
-            # Start another thread to handle connection and update counter
-            conn_t = threading.Thread(target=self.conn_f, args=(self.sock, msg))
-            conn_t.start()
+            if topic:
+                print(f"Loading match screen for topic {topic}...")
+                self.state = "match"
+                self.load_video("assets/videos/match.mp4")
+                print("Loaded. Connecting to server...")
+
+                self.sock = establish_connection(self.name, ip=self.ip)
+                msg = build_message("S", topic)
+                print("Connection established. Requesting match...")
+
+                # Start another thread to handle connection and update counter
+                conn_t = threading.Thread(target=self.conn_f, args=(self.sock, msg))
+                conn_t.start()
 
     def load_next_question(self) -> None:
         """
@@ -465,6 +488,122 @@ class Gui:
         for p in self.play_on_vid.items():
             self.screen.blit(p[1][0], p[1][1])
 
+    def handle_mouse_click_on_welcome(self):
+        x, y = pygame.mouse.get_pos()
+
+        if y > 658 and x < 124:  # Clicked on one of the buttons
+            if x < 63:  # Settings button
+                self.load_settings_screen()
+            else:  # Credits button
+                self.load_credits_screen()
+        else:
+            self.load_topics_screen()
+
+    def load_credits_screen(self):
+        print("Loading credits screen...")
+        sc = pygame.image.load("assets/pictures/credits.png")
+        self.screen.blit(sc, (0, 0))
+        self.state = "credits"
+        print("Loaded. Waiting for user...")
+
+    def load_sharon_screen(self):
+        print("Loading sharon screen...")
+        sc = pygame.image.load("assets/pictures/sharon.png")
+        self.screen.blit(sc, (0, 0))
+        self.state = "sharon"
+        print("Loaded. Waiting for user...")
+
+    def load_settings_screen(self):
+        print("Loading settings screen...")
+        sc = pygame.image.load("assets/pictures/settings.png")
+        self.screen.blit(sc, (0, 0))
+        self.state = "settings"
+
+        # Load textbox
+        self.namemgr.value = self.name
+        self.namemgr.dehighlight()
+        self.namemgr.blit()
+
+        self.ipmgr.value = self.ip
+        self.ipmgr.dehighlight()
+        self.ipmgr.blit()
+
+        print("Loaded. Waiting for user...")
+
+    def handle_name_typing(self, event):
+        # TODO: ADD SAME NAME VAL. IN SERVER
+        if event.key == pygame.K_BACKSPACE:
+            self.namemgr.value = self.namemgr.value[:-1]
+            self.namemgr.blit()
+
+        elif (event.unicode.isalpha() or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:  # TODO: REPLACE SPACE WITH UNDERSCORE
+            self.namemgr.value += event.unicode
+            self.namemgr.blit()
+
+        else:
+            # TODO: DISPLAY MSG
+            pass
+
+    def handle_addr_typing(self, event):
+        if event.key == pygame.K_BACKSPACE:
+            self.ipmgr.value = self.ipmgr.value[:-1]
+            self.ipmgr.blit()
+
+        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:  # TODO: REPLACE SPACE WITH UNDERSCORE
+            self.ipmgr.value += event.unicode
+            self.ipmgr.blit()
+
+        else:
+            # TODO: DISPLAY MSG
+            pass
+
+    def handle_mouse_click_on_settings(self):
+        x, y = pygame.mouse.get_pos()
+
+        if 577 < y < 648:
+            if 309 < x < 509:  # Cancel button
+                self.load_welcome_screen()
+                return
+
+            elif 571 < x < 771:  # Confirm button
+                self.ip = self.ipmgr.value
+                self.name = self.namemgr.value
+
+                self.load_welcome_screen()
+                return
+
+        if 164 < x < 580:
+            if 354 < y < 412:  # nickname field
+                self.state = "settings-name-tb"
+                self.namemgr.highlight()
+                return
+
+            elif 433 < y < 491:  # ip field
+                self.state = "settings-addr-tb"
+                self.ipmgr.highlight()
+                return
+
+        self.state = "settings"
+        # de-highlight both fields
+        self.namemgr.dehighlight()
+        self.ipmgr.dehighlight()
+
+    def handle_mouse_click_on_credits(self):
+        pos = pygame.mouse.get_pos()
+        x, y = pos
+
+        if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
+            self.load_welcome_screen()
+
+        elif 616 < y < 658 and 688 < x < 956:
+            self.load_sharon_screen()
+
+    def handle_mouse_click_on_sharon(self):
+        pos = pygame.mouse.get_pos()
+
+        if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
+            self.load_credits_screen()
+
     def run(self) -> None:
         """ Mainloop function """
 
@@ -486,7 +625,7 @@ class Gui:
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.state != "error":
                     if event.button == 1:
                         if self.state == "welcome":
-                            self.load_topics_screen()
+                            self.handle_mouse_click_on_welcome()
 
                         elif self.state == "topics":
                             self.handle_mouse_click_on_topic()
@@ -498,11 +637,28 @@ class Gui:
                                 send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
                                 self.load_next_question()  # Load next question / game results
 
+                        elif self.state.startswith("settings"):
+                            self.handle_mouse_click_on_settings()
+
+                        elif self.state == "credits":
+                            self.handle_mouse_click_on_credits()
+
+                        elif self.state == "sharon":
+                            self.handle_mouse_click_on_sharon()
+
+                elif event.type == pygame.KEYDOWN:  # Handle typing
+                    if self.state == "settings-name-tb":
+                        self.handle_name_typing(event)
+
+                    elif self.state == "settings-addr-tb":
+                        self.handle_addr_typing(event)
+
             pygame.display.flip()  # Update screen
 
 
 def main():
-    Gui()
+    gui = Gui()
+    gui.run()
 
 
 if __name__ == "__main__":
