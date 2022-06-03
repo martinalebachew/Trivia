@@ -180,7 +180,7 @@ class Gui:
         print("Initializing...")
         pygame.init()
         pygame.display.set_caption("Play Trivia!")
-        icon = pygame.image.load("assets/icon.png")
+        icon = pygame.image.load("assets/pictures/icon.png")
         pygame.display.set_icon(icon)
 
         #   Settings menu
@@ -238,14 +238,14 @@ class Gui:
 
             elif rsp.code == "N":
                 wait = int(rsp.fields[0])
-                font = pygame.font.Font("assets/fonts/Ploni-Regular-AAA.ttf", 40)
+                font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
                 text = font.render(f"{wait}...", True, (255, 255, 255))
                 self.play_on_vid["match_seconds_counter"] = (text, (10, 670))
 
                 while wait > 0:
                     sleep(1)
                     wait -= 1
-                    font = pygame.font.Font("assets/fonts/Ploni-Regular-AAA.ttf", 40)
+                    font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
                     text = font.render(f"{wait}...", True, (255, 255, 255))
                     self.play_on_vid["match_seconds_counter"] = (text, (10, 670))
 
@@ -264,7 +264,7 @@ class Gui:
         """
 
         self.state = "error"
-        self.load_video("assets/error.mp4")
+        self.load_video("assets/videos/error.mp4")
 
     def close_client(self) -> None:
         """
@@ -310,17 +310,17 @@ class Gui:
 
         self.stop_video()
         print("Loading question screen...")
-        sc = pygame.image.load("assets/question_template.png")
+        sc = pygame.image.load("assets/pictures/question.png")
         self.screen.blit(sc, (0, 0))
 
         self.qc += 1  # Increment questions counter
 
         # Load text
         # TODO: FIX HEBREW RTL WORKAROUND
-        question_font = pygame.font.Font("assets/fonts/Ploni-Demibold-AAA.ttf", 55)
-        answers_font = pygame.font.Font("assets/fonts/Ploni-Regular-AAA.ttf", 40)
-        header_font = pygame.font.Font("assets/fonts/Ploni-Regular-AAA.ttf", 55)
-        large_header_font = pygame.font.Font("assets/fonts/Ploni-Demibold-AAA.ttf", 100)
+        question_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 55)
+        answers_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+        header_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 55)
+        large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
 
         text = header_font.render(self.against + "משחק נגד "[::-1], True, (255, 255, 255))
         text_rect = text.get_rect()
@@ -363,11 +363,11 @@ class Gui:
 
         #   Welcome screen:
         print("Loading welcome screen...")
-        welcome_bg = pygame.image.load("assets/welcome_screen.png")
+        welcome_bg = pygame.image.load("assets/pictures/welcome.png")
         self.screen.blit(welcome_bg, (0, 0))
 
         #   Load credit text:
-        font = pygame.font.Font("assets/fonts/Ploni-Regular-AAA.ttf", 32)
+        font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
         text = font.render("מרטין אלבצאו"[::-1], True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
         self.screen.blit(text, (900, 680))
 
@@ -381,7 +381,7 @@ class Gui:
         """
 
         print("Loading topics screen...")
-        sc = pygame.image.load("assets/topic_screen.png")
+        sc = pygame.image.load("assets/pictures/topics.png")
         self.screen.blit(sc, (0, 0))
         self.state = "topics"
         print("Loaded. Waiting for user...")
@@ -392,7 +392,7 @@ class Gui:
         if topic:
             print(f"Loading match screen for topic {topic}...")
             self.state = "match"
-            self.load_video("assets/match.mp4")
+            self.load_video("assets/videos/match.mp4")
             print("Loaded. Connecting to server...")
 
             self.sock = establish_connection(self.name, ip=self.ip)
@@ -422,15 +422,15 @@ class Gui:
             print("Loading results screen...")
 
             if rsp.fields[0] == self.name:
-                bg = pygame.image.load("assets/winner_screen.png")
+                bg = pygame.image.load("assets/pictures/winner.png")
                 self.state = "winner"
 
             elif rsp.fields[0] == "B":
-                bg = pygame.image.load("assets/tie_screen.png")
+                bg = pygame.image.load("assets/pictures/tie.png")
                 self.state = "tie"
 
             else:
-                bg = pygame.image.load("assets/loser_screen.png")
+                bg = pygame.image.load("assets/pictures/loser.png")
                 self.state = "loser"
 
             self.screen.blit(bg, (0, 0))
