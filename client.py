@@ -606,8 +606,8 @@ class Gui:
                 return
 
             elif 571 < x < 771:  # Confirm button
-                self.ip = self.ipmgr.value
-                self.name = self.namemgr.value
+                self.ip = self.ipmgr.value if len(self.ipmgr.value) > 0 else self.ip
+                self.name = self.namemgr.value if len(self.namemgr.value) > 0 else self.name
 
                 self.load_welcome_screen()
                 return
