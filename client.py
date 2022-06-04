@@ -616,11 +616,13 @@ class Gui:
             if 354 < y < 412:  # nickname field
                 self.state = "settings-name-tb"
                 self.namemgr.highlight()
+                self.ipmgr.dehighlight()
                 return
 
             elif 433 < y < 491:  # ip field
                 self.state = "settings-addr-tb"
                 self.ipmgr.highlight()
+                self.namemgr.dehighlight()
                 return
 
         self.state = "settings"
