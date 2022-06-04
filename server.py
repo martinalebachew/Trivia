@@ -9,6 +9,7 @@ import random
 import pickle
 import socket
 import threading
+from time import sleep
 
 # Server global variable
 waitlist = {k: [] for k in TOPICS}  # Waiting list by topic dict - see server documentation
@@ -282,6 +283,8 @@ def manage_game(topic, client, match) -> None:
         t2.start()
         t1.join()
         t2.join()
+
+        sleep(0.2)  # Slight delay between questions
 
     # calculate and send game results to both clients
     if score[tid][client.cid] > score[tid][match.cid]:

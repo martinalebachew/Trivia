@@ -16,6 +16,7 @@ import pygame
 # Client constants
 SID = "S"  # Server representation in logs
 SCREEN_SIZE = (1080, 720)  # [DO NOT ALTER] Screen dimensions
+ANS_CENT = [(792, 452), (289, 452), (792, 567), (289, 567)]
 
 
 # GUI static functions
@@ -280,6 +281,11 @@ class Gui:
         icon = pygame.image.load("assets/pictures/icon.png")
         pygame.display.set_icon(icon)
 
+        self.question_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 55)
+        self.answers_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+        self.header_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 55)
+        self.large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
+
         self.load_welcome_screen()
 
     def set_name(self, name) -> None:
@@ -350,51 +356,43 @@ class Gui:
 
         self.stop_video()
         print("Loading question screen...")
-        sc = pygame.image.load("assets/pictures/question.png")
-        self.screen.blit(sc, (0, 0))
+        self.screen.fill((140, 82, 255))
 
         self.qc += 1  # Increment questions counter
 
         # Load text
         # TODO: FIX HEBREW RTL WORKAROUND
-        question_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 55)
-        answers_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
-        header_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 55)
-        large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
+        self.load_question_text(self.against + "משחק נגד "[::-1], self.header_font, lambda_f=lambda w, h: (1080-69-w, 60))
+        self.load_question_text(f"{self.qc}/{GL}", self.header_font, pos=(69, 60))
+        self.load_question_text(f"שאלה {self.qc}"[::-1], self.large_header_font, lambda_f=lambda w, h: (1080-69-w, 120))
+        self.load_question_text(self.qrsp.fields[0][::-1], self.question_font, center=(SCREEN_SIZE[0] / 2, 340))
 
-        text = header_font.render(self.against + "משחק נגד "[::-1], True, (255, 255, 255))
-        text_rect = text.get_rect()
-        self.screen.blit(text, (1080-69-text_rect.width, 60))
-
-        text = header_font.render(f"{self.qc}/{GL}", True, (255, 255, 255))
-        self.screen.blit(text, (69, 60))
-
-        text = large_header_font.render(f"שאלה {self.qc}"[::-1], True, (255, 255, 255))
-        text_rect = text.get_rect()
-        self.screen.blit(text, (1080-69-text_rect.width, 120))
-
-        text = question_font.render(self.qrsp.fields[0][::-1], True, (255, 255, 255))
-        text_rect = text.get_rect(center=(SCREEN_SIZE[0] / 2, 340))
-        self.screen.blit(text, text_rect)
-
-        text = answers_font.render(self.qrsp.fields[1][::-1], True, (255, 255, 255))
-        text_rect = text.get_rect(center=(792, 452))
-        self.screen.blit(text, text_rect)
-
-        text = answers_font.render(self.qrsp.fields[2][::-1], True, (255, 255, 255))
-        text_rect = text.get_rect(center=(289, 452))
-        self.screen.blit(text, text_rect)
-
-        text = answers_font.render(self.qrsp.fields[3][::-1], True, (255, 255, 255))
-        text_rect = text.get_rect(center=(792, 567))
-        self.screen.blit(text, text_rect)
-
-        text = answers_font.render(self.qrsp.fields[4][::-1], True, (255, 255, 255))
-        text_rect = text.get_rect(center=(289, 567))
-        self.screen.blit(text, text_rect)
+        for i in range(1, 5):
+            self.load_question_text(self.qrsp.fields[i][::-1], self.answers_font, center=ANS_CENT[i - 1], bgc=(61, 65, 118))
 
         self.state = "question"
         print("Loaded. Waiting for user...")
+
+    def load_question_text(self, text, font, pos=None, center=None, lambda_f=None, bgc=None):
+        text = font.render(text, True, (255, 255, 255))
+
+        if center:
+            pos = text.get_rect(center=center)
+        elif lambda_f:
+            text_rect = text.get_rect()
+            pos = lambda_f(text_rect.width, text_rect.height)
+
+        if bgc:
+            rect = pygame.Rect(0, 0, 433, 78)
+
+            if center:
+                rect.center = center
+            elif pos:
+                rect = pygame.Rect(pos[0], pos[1], 433, 78)
+
+            pygame.draw.rect(self.screen, bgc, rect, 0)
+
+        self.screen.blit(text, pos)
 
     def load_welcome_screen(self) -> None:
         """
@@ -441,7 +439,15 @@ class Gui:
                 self.load_video("assets/videos/match.mp4")
                 print("Loaded. Connecting to server...")
 
-                self.sock = establish_connection(self.name, ip=self.ip)
+                try:
+                    self.sock = establish_connection(self.name, ip=self.ip)
+                except Error.Client.ConnectionFailed:
+                    self.raise_error()
+                    return
+                except Error.Client.UnexpectedResponse:
+                    self.raise_error()
+                    return
+
                 msg = build_message("S", topic)
                 print("Connection established. Requesting match...")
 
@@ -668,6 +674,8 @@ class Gui:
                             ans = chosen_answer(pygame.mouse.get_pos())  # Calculate chosen answer
 
                             if ans:
+                                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1], bgc=(134, 170, 223))  # Highlight chosen answer
+                                pygame.display.flip()  # Update screen
                                 send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
                                 self.load_next_question()  # Load next question / game results
 
