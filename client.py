@@ -7,7 +7,6 @@ from protocol import *
 from typing import Union
 import math
 import random
-import threading
 import socket
 from time import sleep
 import cv2
@@ -487,6 +486,7 @@ class Gui:
 
         elif rsp.code == "R":
             self.qc = 0  # Reset question count
+            self.sock.close()  # Close server connection
 
             # Load results screen
             print("Loading results screen...")

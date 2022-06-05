@@ -6,7 +6,6 @@
 from protocol import *
 from typing import Union
 import random
-import pickle
 import socket
 import threading
 from time import sleep
@@ -271,6 +270,8 @@ def manage_game(topic, client, match) -> None:
     game_questions = question_set(topic, GL)  # get a random set of questions
     for i in range(0, len(game_questions)):
         q = game_questions.pop()
+        q.randomize()  # Randomize answers for the question
+
         if i == 0:  # for the first question - send with the nickname of client's rival
             send_message(client.sock, client.cid, build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4, match.name))
             send_message(match.sock, match.cid, build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4, client.name))
@@ -307,10 +308,8 @@ def manage_game(topic, client, match) -> None:
 
 
 def main():
-    # Load questions
-    with open("questions", "rb") as f:
-        global questions
-        questions = pickle.load(f)  # TODO: QUESTION SET TO AVOID DUPLICATES
+    global questions
+    questions = load_questions()
 
     # Create and bind the server main socket
     ss = socket.socket()

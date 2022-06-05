@@ -2,8 +2,10 @@
 # By Martin Alebachew
 # PROTOCOL.PY
 # #####
+
 import socket
 import threading
+from random import randint, random
 
 # Protocol-wide settings
 PORT = 15999  # Protocol port
@@ -12,10 +14,10 @@ BUFF = 1024  # recv buffer size
 
 DW = 5  # Time to wait before asking for rematch
 ANS = 10  # Time to answer question - before timeout
-GL = 3  # Game length
+GL = 8  # Game length
 
 MSG_CODES = ["I", "W", "S", "C", "N", "Q", "A", "R", "E"]  # Existing messages in protocol
-TOPICS = ["lit", "art", "sci", "cyb", "mus", "cin"]  # Trivia topics by pos (DO NOT ALTER)
+TOPICS = ["lit", "art", "sci", "mix", "mus", "cin"]  # Trivia topics by pos (DO NOT ALTER)
 
 
 # Protocol-wide classes
@@ -70,6 +72,13 @@ class Question:
         self.a3 = a3
         self.a4 = a4
         self.c = c
+
+    def randomize(self):
+        new_c = randint(1, 4)
+
+        # Using exec to swap old and new position of correct answer
+        exec(f"self.a{new_c}, self.a{self.c} = self.a{self.c}, self.a{new_c}")
+        self.c = new_c
 
 
 class Message:
@@ -222,3 +231,18 @@ def recv_message(sock, conn, timeout=TIMEOUT):
 
     log(conn, f"<<<<< {msg}")
     return break_message(msg)
+
+
+def load_questions():
+    questions = {topic: [] for topic in TOPICS}
+
+    for topic in TOPICS:
+        if topic != "mix":
+            with open(f"questions/{topic}.txt", "r") as f:
+                topic_questions = f.read().split("\n\n")
+                for q in topic_questions:
+                    q = q.split('\n')
+                    questions[topic].append(Question(q[0], q[1], q[2], q[3], q[4], 1))
+                    questions["mix"].append(Question(q[0], q[1], q[2], q[3], q[4], 1))
+
+    return questions
