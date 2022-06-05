@@ -77,26 +77,29 @@ class ServerThread(StoppableThread):
             topic = None
 
             while msg.code == "S":
-                if self.stopped():  # check if another thread is managing the game
-                    """
-                    Because one of the threads removes the other client from the waiting list,
-                    and only one thread can access it at a time,
-                    one of them is bound to stop the other while it's still searching a match.
-                    """
+                client = Client(name, self.sock, self.addr, self.cid, self)
+                match = match_clients(msg.fields[0], client)
+                topic = msg.fields[0]  # Save the topic which contains client in the waiting list
 
-                    log(self.cid, f"Game found, but managed by another thread. Closing thread.")
+                if not match:
+                    msg = None
+                    while not msg:
+                        if self.stopped():
+                            """
+                            Because one of the threads removes the other client from the waiting list,
+                            and only one thread can access it at a time,
+                            one of them is bound to stop the other while it's still searching a match,
+                            specifically waiting for a S/C query from the client.
+                            """
+
+                            log(self.cid, f"Game found, but managed by another thread. Closing thread.")
+                            return
+
+                        msg = recv_message(self.sock, self.cid, timeout=0.1)
+
+                else:
+                    manage_game(msg.fields[0], client, match)
                     break
-
-                else:  # search for match
-                    client = Client(name, self.sock, self.addr, self.cid, self)
-                    match = match_clients(msg.fields[0], client)
-                    topic = msg.fields[0]  # Save the topic which contains client in the waiting list
-
-                    if not match:
-                        msg = recv_message(self.sock, self.cid, TIMEOUT + DW)  # TODO: FIX TIMEOUT
-                    else:
-                        manage_game(msg.fields[0], client, match)
-                        break
 
             else:
                 if msg.code == "C":
