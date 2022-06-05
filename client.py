@@ -268,6 +268,8 @@ class Gui:
         self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
         self.state = None  # [Mainloop] Program's logic variable - current state tracker
 
+        self.topic = None
+
         # Initialize GUI:
         #   Application settings:
         print("Initializing...")
@@ -431,29 +433,32 @@ class Gui:
             self.load_welcome_screen()
 
         else:
-            topic = click_in_bounds(pos)
+            self.topic = click_in_bounds(pos)
 
-            if topic:
-                print(f"Loading match screen for topic {topic}...")
-                self.state = "match"
-                self.load_video("assets/videos/match.mp4")
-                print("Loaded. Connecting to server...")
+            if self.topic:
+                self.ask_for_match()
 
-                try:
-                    self.sock = establish_connection(self.name, ip=self.ip)
-                except Error.Client.ConnectionFailed:
-                    self.raise_error()
-                    return
-                except Error.Client.UnexpectedResponse:
-                    self.raise_error()
-                    return
+    def ask_for_match(self):
+        print(f"Loading match screen for topic {self.topic}...")
+        self.state = "match"
+        self.load_video("assets/videos/match.mp4")
+        print("Loaded. Connecting to server...")
 
-                msg = build_message("S", topic)
-                print("Connection established. Requesting match...")
+        try:
+            self.sock = establish_connection(self.name, ip=self.ip)
+        except Error.Client.ConnectionFailed:
+            self.raise_error()
+            return
+        except Error.Client.UnexpectedResponse:
+            self.raise_error()
+            return
 
-                # Start another thread to handle connection and update counter
-                self.conn_t = MatchThread(self, self.sock, msg)
-                self.conn_t.start()
+        msg = build_message("S", self.topic)
+        print("Connection established. Requesting match...")
+
+        # Start another thread to handle connection and update counter
+        self.conn_t = MatchThread(self, self.sock, msg)
+        self.conn_t.start()
 
     def handle_mouse_click_on_match(self):
         x, y = pygame.mouse.get_pos()
@@ -481,20 +486,22 @@ class Gui:
             self.load_question()
 
         elif rsp.code == "R":
+            self.qc = 0  # Reset question count
+
             # Load results screen
             print("Loading results screen...")
 
             if rsp.fields[0] == self.name:
                 bg = pygame.image.load("assets/pictures/winner.png")
-                self.state = "winner"
+                self.state = "results-winner"
 
             elif rsp.fields[0] == "B":
                 bg = pygame.image.load("assets/pictures/tie.png")
-                self.state = "tie"
+                self.state = "results-tie"
 
             else:
                 bg = pygame.image.load("assets/pictures/loser.png")
-                self.state = "loser"
+                self.state = "results-loser"
 
             self.screen.blit(bg, (0, 0))
             print("Loaded. Waiting for user...")
@@ -646,6 +653,30 @@ class Gui:
         if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
             self.load_credits_screen()
 
+    def handle_mouse_click_on_results(self):
+        x, y = pygame.mouse.get_pos()
+
+        if self.state == "results-winner":
+            if 365 < x < 532 and 503 < y < 563:
+                self.ask_for_match()
+
+            elif 144 < x < 312 and 503 < y < 563:
+                self.load_welcome_screen()
+
+        elif self.state == "results-tie":
+            if 789 < x < 957 and 580 < y < 639:
+                self.ask_for_match()
+
+            elif 569 < x < 737 and 580 < y < 639:
+                self.load_welcome_screen()
+
+        elif self.state == "results-loser":
+            if 789 < x < 957 and 494 < y < 554:
+                self.ask_for_match()
+
+            elif 569 < x < 737 and 494 < y < 554:
+                self.load_welcome_screen()
+
     def run(self) -> None:
         """ Mainloop function """
 
@@ -692,6 +723,9 @@ class Gui:
 
                         elif self.state == "match":
                             self.handle_mouse_click_on_match()
+
+                        elif self.state.startswith("results"):
+                            self.handle_mouse_click_on_results()
 
                 elif event.type == pygame.KEYDOWN:  # Handle typing
                     if self.state == "settings-name-tb":
