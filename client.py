@@ -256,6 +256,7 @@ class Gui:
 
         self.qrsp = None  # [Question Fetching] Temporary question response variable
         self.qc = 0  # [Question Fetching] Question count variable
+        self.qt = ANS  # [Question Fetching] Question timer variable
         self.against = None  # [Question Fetching] Rival nickname variable
 
         self.sock = None
@@ -263,6 +264,7 @@ class Gui:
         self.ip = "127.0.0.1"
 
         self.conn_t = None  # Match searching thread
+        self.chosen_ans = False
 
         self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
         self.state = None  # [Mainloop] Program's logic variable - current state tracker
@@ -282,28 +284,13 @@ class Gui:
         icon = pygame.image.load("assets/pictures/icon.png")
         pygame.display.set_icon(icon)
 
+        self.timer_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 40)
         self.question_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 55)
         self.answers_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
         self.header_font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 55)
         self.large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
 
         self.load_welcome_screen()
-
-    def set_name(self, name) -> None:
-        """
-        pygame-menu method for updating the name variable
-        using the name field.
-        """
-
-        self.name = name
-
-    def set_ip(self, addr) -> None:
-        """
-        pygame-menu method for updating the ip variable
-        using the ip field.
-        """
-
-        self.ip = addr
 
     def raise_error(self) -> None:
         """
@@ -358,21 +345,52 @@ class Gui:
         self.stop_video()
         print("Loading question screen...")
         self.screen.fill((140, 82, 255))
+        sc = pygame.image.load("assets/pictures/question.png")
+        self.screen.blit(sc, (0, 0))
 
         self.qc += 1  # Increment questions counter
+        self.qt = ANS  # Reset question timer
+        self.chosen_ans = False
 
         # Load text
         # TODO: FIX HEBREW RTL WORKAROUND
-        self.load_question_text(self.against + "משחק נגד "[::-1], self.header_font, lambda_f=lambda w, h: (1080-69-w, 60))
+        self.load_question_text(str(ANS), self.timer_font, center=(971, 183))
+        self.load_question_text(self.against + "משחק נגד "[::-1], self.header_font, lambda_f=lambda w, h: (1011-w, 60))
         self.load_question_text(f"{self.qc}/{GL}", self.header_font, pos=(69, 60))
-        self.load_question_text(f"שאלה {self.qc}"[::-1], self.large_header_font, lambda_f=lambda w, h: (1080-69-w, 120))
+        self.load_question_text(f"שאלה {self.qc}"[::-1], self.large_header_font, lambda_f=lambda w, h: (915-w, 120))
         self.load_question_text(self.qrsp.fields[0][::-1], self.question_font, center=(SCREEN_SIZE[0] / 2, 340))
 
         for i in range(1, 5):
             self.load_question_text(self.qrsp.fields[i][::-1], self.answers_font, center=ANS_CENT[i - 1], bgc=(61, 65, 118))
 
         self.state = "question"
+
+        # Launch timer thread
+        timer_t = threading.Thread(target=self.decrement_question_timer, args=(self.qc,))
+        timer_t.start()
+
         print("Loaded. Waiting for user...")
+
+    def decrement_question_timer(self, qc):
+        while self.qt > 0:
+            if self.qc != qc:
+                return
+
+            sleep(1)
+            if self.state != "question":
+                return
+
+            self.qt -= 1
+            if self.qt <= 3:
+                sc = pygame.image.load("assets/pictures/question_lowtime.png")
+            else:
+                sc = pygame.image.load("assets/pictures/question.png")
+            self.screen.blit(sc, (0, 0))
+            self.load_question_text(str(self.qt), self.timer_font, center=(971, 183))
+
+        sleep(1)
+        if not self.chosen_ans:
+            self.sumbit_answer(0)
 
     def load_question_text(self, text, font, pos=None, center=None, lambda_f=None, bgc=None):
         text = font.render(text, True, (255, 255, 255))
@@ -470,14 +488,10 @@ class Gui:
             self.stop_video()
             self.load_topics_screen()
 
-    def load_next_question(self) -> None:
+    def load_next_question(self, rsp) -> None:
         """
         Loads next question / game results.
         """
-
-        # wait for the next question
-        rsp = recv_message(self.sock, SID, timeout=TIMEOUT + ANS)
-        # TODO: FIX TIMEOUT
 
         if rsp.code == "Q":
             # Load question screen
@@ -677,6 +691,29 @@ class Gui:
             elif 569 < x < 737 and 494 < y < 554:
                 self.load_welcome_screen()
 
+    def sumbit_answer(self, ans):
+        send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
+
+        if ans != 0:
+            self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+                                    bgc=(134, 170, 223))  # Highlight chosen answer
+
+        # Wait for the next question / game results
+        rsp = recv_message(self.sock, SID, timeout=TIMEOUT + ANS)
+        # TODO: FIX TIMEOUT
+
+        if ans != 0:
+            results_ptr = 5 if rsp.code == "Q" else 1
+            if int(rsp.fields[results_ptr]) == ans:
+                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+                                        bgc=(0, 128, 55))
+            else:
+                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+                                        bgc=(228, 64, 50))
+
+        sleep(0.3)
+        self.load_next_question(rsp)  # Load next question / game results
+
     def run(self) -> None:
         """ Mainloop function """
 
@@ -704,13 +741,12 @@ class Gui:
                             self.handle_mouse_click_on_topic()
 
                         elif self.state == "question":
-                            ans = chosen_answer(pygame.mouse.get_pos())  # Calculate chosen answer
+                            ans = chosen_answer(pygame.mouse.get_pos())
 
                             if ans:
-                                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1], bgc=(134, 170, 223))  # Highlight chosen answer
-                                pygame.display.flip()  # Update screen
-                                send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
-                                self.load_next_question()  # Load next question / game results
+                                self.chosen_ans = True
+                                a_t = threading.Thread(target=self.sumbit_answer, args=(ans,))
+                                a_t.start()
 
                         elif self.state.startswith("settings"):
                             self.handle_mouse_click_on_settings()

@@ -206,9 +206,9 @@ def question_set(topic, length) -> set[Question]:
     if len(questions[topic]) < length:
         raise Error.Server.NotEnoughQuestions
     elif len(questions[topic]) == length:
-        return set(questions[topic])  # TODO: DELETE CONVERSION
+        return set(questions[topic])
     else:
-        available_q = list(questions[topic])  # Temporary list of existing questions in the given topic
+        available_q = list(questions[topic])  # NEW Temporary list of existing questions in the given topic
         questions_set = set()
 
         for i in range(0, length):
@@ -268,6 +268,8 @@ def manage_game(topic, client, match) -> None:
         }
 
     game_questions = question_set(topic, GL)  # get a random set of questions
+
+    prev_ans = None
     for i in range(0, len(game_questions)):
         q = game_questions.pop()
         q.randomize()  # Randomize answers for the question
@@ -275,10 +277,12 @@ def manage_game(topic, client, match) -> None:
         if i == 0:  # for the first question - send with the nickname of client's rival
             send_message(client.sock, client.cid, build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4, match.name))
             send_message(match.sock, match.cid, build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4, client.name))
-        else:  # for the rest - send only the question with the answers
-            msg = build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4)
+        else:  # for the rest - send with the answer of the previous question
+            msg = build_message("Q", q.q, q.a1, q.a2, q.a3, q.a4, prev_ans)
             send_message(client.sock, client.cid, msg)
             send_message(match.sock, match.cid, msg)
+
+        prev_ans = q.c
 
         # get answer from both clients at the same time using threads
         t1 = threading.Thread(target=recv_f, args=(tid, client, q.c))
@@ -292,11 +296,11 @@ def manage_game(topic, client, match) -> None:
 
     # calculate and send game results to both clients
     if score[tid][client.cid] > score[tid][match.cid]:
-        msg = build_message("R", client.name)
+        msg = build_message("R", client.name, prev_ans)
     elif score[tid][client.cid] < score[tid][match.cid]:
-        msg = build_message("R", match.name)
+        msg = build_message("R", match.name, prev_ans)
     else:
-        msg = build_message("R", "B")
+        msg = build_message("R", "B", prev_ans)
 
     send_message(client.sock, client.cid, msg)
     send_message(match.sock, match.cid, msg)
