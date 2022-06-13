@@ -11,11 +11,14 @@ import socket
 from time import sleep
 import cv2
 import pygame
+from string import ascii_letters
 
 # Client constants
 SID = "S"  # Server representation in logs
 SCREEN_SIZE = (1080, 720)  # [DO NOT ALTER] Screen dimensions
 ANS_CENT = [(792, 452), (289, 452), (792, 567), (289, 567)]
+HEB_CHARS = "אבגדהוזחטיכלמנסעפצקרשתץןםףך"
+CONT_SEQ = " ־–-:״\"',׳()"
 
 
 # GUI static functions
@@ -149,6 +152,41 @@ def random_name() -> str:
              "Spud", "Grease", "Pickle"]
 
     return names[random.randint(0, len(names) - 1)]  # Return a random name from the list above
+
+
+def hebrew_proof(text):
+    spl = []
+    ts = ""
+    heb_seq = False
+    heb_dec = False
+    only_heb = True
+
+    for ch in text:
+        if ch in HEB_CHARS or (ch in CONT_SEQ and heb_seq):  # if in hebrew
+            if not heb_seq:  # if prev seq not in hebrew
+                spl.append(ts)  # save not reversed
+                ts = ""
+
+            heb_seq = True
+            heb_dec = True  # hebrew somewhere in text
+            ts += ch
+
+        else:  # if not in hebrew
+            only_heb = False
+            if heb_seq:  # if prev seq in hebrew
+                spl.append(ts[::-1])  # save reversed
+                ts = ""
+
+            heb_seq = False
+            ts += ch
+
+    if ts != "":  # save last sequence
+        spl.append(ts[:: -1 if heb_seq else 1])
+
+    if heb_dec:  # if there's hebrew in text - reverse order of sequences
+        spl.reverse()
+
+    return "".join(spl)
 
 
 class TextboxMgr:
@@ -355,13 +393,13 @@ class Gui:
         # Load text
         # TODO: FIX HEBREW RTL WORKAROUND
         self.load_question_text(str(ANS), self.timer_font, center=(971, 183))
-        self.load_question_text(self.against + "משחק נגד "[::-1], self.header_font, lambda_f=lambda w, h: (1011-w, 60))
-        self.load_question_text(f"{self.qc}/{GL}", self.header_font, pos=(69, 60))
-        self.load_question_text(f"שאלה {self.qc}"[::-1], self.large_header_font, lambda_f=lambda w, h: (915-w, 120))
-        self.load_question_text(self.qrsp.fields[0][::-1], self.question_font, center=(SCREEN_SIZE[0] / 2, 340))
+        self.load_question_text(hebrew_proof(f"משחק נגד {self.against}"), self.header_font, lambda_f=lambda w, h: (1011-w, 60))
+        self.load_question_text(hebrew_proof(f"{self.qc}/{GL}"), self.header_font, pos=(69, 60))
+        self.load_question_text(hebrew_proof(f"שאלה {self.qc}"), self.large_header_font, lambda_f=lambda w, h: (915-w, 120))
+        self.load_question_text(hebrew_proof(self.qrsp.fields[0]), self.question_font, center=(SCREEN_SIZE[0] / 2, 340))
 
         for i in range(1, 5):
-            self.load_question_text(self.qrsp.fields[i][::-1], self.answers_font, center=ANS_CENT[i - 1], bgc=(61, 65, 118))
+            self.load_question_text(hebrew_proof(self.qrsp.fields[i]), self.answers_font, center=ANS_CENT[i - 1], bgc=(61, 65, 118))
 
         self.state = "question"
 
@@ -427,7 +465,7 @@ class Gui:
 
         #   Load credit text:
         font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
-        text = font.render("מרטין אלבצאו"[::-1], True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
+        text = font.render(hebrew_proof("מרטין אלבצאו"), True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
         self.screen.blit(text, (900, 680))
 
         print("Loaded. Waiting for user...")
@@ -695,7 +733,7 @@ class Gui:
         send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
 
         if ans != 0:
-            self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+            self.load_question_text(hebrew_proof(self.qrsp.fields[ans]), self.answers_font, center=ANS_CENT[ans - 1],
                                     bgc=(134, 170, 223))  # Highlight chosen answer
 
         # Wait for the next question / game results
@@ -705,10 +743,10 @@ class Gui:
         if ans != 0:
             results_ptr = 5 if rsp.code == "Q" else 1
             if int(rsp.fields[results_ptr]) == ans:
-                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+                self.load_question_text(hebrew_proof(self.qrsp.fields[ans]), self.answers_font, center=ANS_CENT[ans - 1],
                                         bgc=(0, 128, 55))
             else:
-                self.load_question_text(self.qrsp.fields[ans][::-1], self.answers_font, center=ANS_CENT[ans - 1],
+                self.load_question_text(hebrew_proof(self.qrsp.fields[ans]), self.answers_font, center=ANS_CENT[ans - 1],
                                         bgc=(228, 64, 50))
 
         sleep(0.3)
@@ -743,7 +781,7 @@ class Gui:
                         elif self.state == "question":
                             ans = chosen_answer(pygame.mouse.get_pos())
 
-                            if ans:
+                            if ans and not self.chosen_ans:
                                 self.chosen_ans = True
                                 a_t = threading.Thread(target=self.sumbit_answer, args=(ans,))
                                 a_t.start()
