@@ -145,7 +145,11 @@ def recv_f(tid, target, correct) -> None:
     """
 
     msg = recv_message(target.sock, target.cid, timeout=TIMEOUT + ANS)
-    if int(msg.fields[0]) == correct:
+    if msg is None:
+        with lock:
+            score[tid][target.cid] = "F"  # Flag that client has disconnected
+
+    elif int(msg.fields[0]) == correct:
         with lock:
             score[tid][target.cid] += 1
 
@@ -301,6 +305,20 @@ def manage_game(topic, client, match) -> None:
         t2.join()
 
         sleep(0.2)  # Slight delay between questions
+
+        if score[tid][client.cid] == "F":  # Check if one of the clients has disconnected
+            log(tid, f"{client.cid} forfeited. Sending results and closing sockets.")
+            send_message(match.sock, match.cid, build_message("R", match.name, prev_ans))
+            client.sock.close()
+            match.sock.close()
+            return
+
+        elif score[tid][match.cid] == "F":
+            log(tid, f"{client.cid} forfeited. Sending results and closing sockets.")
+            send_message(client.sock, client.cid, build_message("R", client.name, prev_ans))
+            client.sock.close()
+            match.sock.close()
+            return
 
     # calculate and send game results to both clients
     if score[tid][client.cid] > score[tid][match.cid]:
