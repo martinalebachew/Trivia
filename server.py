@@ -9,6 +9,7 @@ import random
 import socket
 import threading
 from time import sleep
+from string import ascii_letters
 
 # Server global variable
 waitlist = {k: [] for k in TOPICS}  # Waiting list by topic dict - see server documentation
@@ -70,6 +71,13 @@ class ServerThread(StoppableThread):
 
         if msg.code == "I":
             name = msg.fields[0]
+
+            for ch in name:  # Validate nickname
+                if ch not in ascii_letters and not ch.isdigit() and ch != "_":
+                    log(self.cid, "Invalid nickname, sending error message and closing connection.")
+                    send_message(self.sock, self.cid, build_message("E", "INV"))  # Send error message
+                    return
+
             send_message(self.sock, self.cid, build_message("W"))  # Send welcome message
 
             msg = recv_message(self.sock, self.cid)  # Get 'S' message (search for game)

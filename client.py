@@ -674,7 +674,7 @@ class Gui:
             self.namemgr.value = self.namemgr.value[:-1]
             self.namemgr.blit()
 
-        elif (event.unicode in ascii_letters or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:
+        elif (event.unicode in ascii_letters or event.unicode.isdigit() or event.unicode == "_") and len(self.namemgr.value) < 12:
             self.namemgr.value += event.unicode
             self.namemgr.blit()
 
@@ -685,7 +685,7 @@ class Gui:
         else:
             font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
             text = font.render(hebrew_proof("הזנת תו שגוי"), True,
-                               (228, 64, 50))  # Reverse string as a workaround for RTL bug
+                               (228, 64, 50))
             self.screen.blit(text, (900, 680))
 
     def handle_addr_typing(self, event):
@@ -697,14 +697,14 @@ class Gui:
             self.ipmgr.value = self.ipmgr.value[:-1]
             self.ipmgr.blit()
 
-        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:
+        elif (event.unicode.isdigit() or event.unicode == ".") and len(self.ipmgr.value) < 15:
             self.ipmgr.value += event.unicode
             self.ipmgr.blit()
 
         else:
             font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
             text = font.render(hebrew_proof("הזנת תו שגוי"), True,
-                               (228, 64, 50))  # Reverse string as a workaround for RTL bug
+                               (228, 64, 50))
             self.screen.blit(text, (900, 680))
 
     def handle_mouse_click_on_welcome(self):
