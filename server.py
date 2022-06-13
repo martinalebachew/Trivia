@@ -136,7 +136,7 @@ def recv_f(tid, target, correct) -> None:
     :type correct: int
     """
 
-    msg = recv_message(target.sock, target.cid, timeout=TIMEOUT + ANS)  # TODO: FIX TIMEOUT
+    msg = recv_message(target.sock, target.cid, timeout=TIMEOUT + ANS)
     if int(msg.fields[0]) == correct:
         with lock:
             score[tid][target.cid] += 1  # TODO: TIME-BASED SCORE
