@@ -154,12 +154,19 @@ def random_name() -> str:
     return names[random.randint(0, len(names) - 1)]  # Return a random name from the list above
 
 
-def hebrew_proof(text):
+def hebrew_proof(text) -> str:
+    """
+    Returns a reformatted string for pygame to view in hebrew.
+    KNOWN BUG with leading AND trailing cont_chars around non-hebrew text.
+
+    :param text: text to reformat
+    :type text: str
+    """
+
     spl = []
     ts = ""
     heb_seq = False
     heb_dec = False
-    only_heb = True
 
     for ch in text:
         if ch in HEB_CHARS or (ch in CONT_SEQ and heb_seq):  # if in hebrew
@@ -172,7 +179,6 @@ def hebrew_proof(text):
             ts += ch
 
         else:  # if not in hebrew
-            only_heb = False
             if heb_seq:  # if prev seq in hebrew
                 spl.append(ts[::-1])  # save reversed
                 ts = ""
@@ -191,6 +197,19 @@ def hebrew_proof(text):
 
 class TextboxMgr:
     def __init__(self, screen, value="", fontsize=20, pos=(0, 0)):
+        """
+        Represents a textbox on settings page.
+
+        :param screen: main surface
+        :param value: default text value
+        :param fontsize: inner text font size
+        :param pos: position on screen
+        :type screen: pygame.Surface
+        :type value: str
+        :type fontsize: int
+        :type pos: (int, int)
+        """
+
         self.screen = screen
         self.value = value
         self.field_color = (61, 65, 118)
@@ -205,10 +224,12 @@ class TextboxMgr:
         self.screen.blit(text_surface, (self.input_rect.x + 10, self.input_rect.y + 7))
 
     def highlight(self):
+        # Color textbox
         self.field_color = (134, 170, 223)
         self.blit()
 
     def dehighlight(self):
+        # De-color textbox
         self.field_color = (61, 65, 118)
         self.blit()
 
@@ -295,17 +316,16 @@ class Gui:
         self.qt = ANS  # [Question Fetching] Question timer variable
         self.against = None  # [Question Fetching] Rival nickname variable
 
-        self.sock = None
-        self.name = random_name()
-        self.ip = "127.0.0.1"
+        self.sock = None  # [Network] Connection socket
+        self.name = random_name()  # [Network] Nickname
+        self.ip = "127.0.0.1"  # [Network] Server IP address
 
-        self.conn_t = None  # Match searching thread
-        self.chosen_ans = False
+        self.conn_t = None  # [Matching] Match searching thread
+        self.chosen_ans = False  # [Matching] Flag to avoid double answering
 
         self.screen = pygame.display.set_mode(SCREEN_SIZE)  # [Mainloop] Pygame screen
         self.state = None  # [Mainloop] Program's logic variable - current state tracker
-
-        self.topic = None
+        self.topic = None  # [Mainloop] Current game topic
 
         # Initialize GUI:
         #   Application settings:
@@ -407,6 +427,26 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def decrement_question_timer(self, qc):
+        """
+        Decrements the timer until reaches 0,
+        then sends a 0 answer to the server.
+
+        -- Workaround to avoid stoppableThread --
+        Thread checks the current question number,
+        with the original question number,
+        and terminates accordingly.
+
+        Also, chosen_answer variable is there
+        because during sleep(1),
+        when the timer displays '0',
+        the user might have clicked on an answer,
+        and then we should not send '0' to the server.
+        --
+
+        :param qc: Question number
+        :type qc: int
+        """
+
         while self.qt > 0:
             if self.qc != qc:
                 return
@@ -417,26 +457,43 @@ class Gui:
 
             self.qt -= 1
             if self.qt <= 3:
-                sc = pygame.image.load("assets/pictures/question_lowtime.png")
+                sc = pygame.image.load("assets/pictures/question_lowtime.png")  # Timer turns red at the last 3 sec
             else:
                 sc = pygame.image.load("assets/pictures/question.png")
+
             self.screen.blit(sc, (0, 0))
             self.load_question_text(str(self.qt), self.timer_font, center=(971, 183))
 
         sleep(1)
-        if not self.chosen_ans:
+        if not self.chosen_ans:  # Avoid double answering
             self.sumbit_answer(0)
 
     def load_question_text(self, text, font, pos=None, center=None, lambda_f=None, bgc=None):
+        """
+        Render text entry of question screen.
+
+        :param text: text to render
+        :param font: font to use
+        :param pos: position on screen
+        :param center: OR center position
+        :param lambda_f: OR lambda expression for calculating position
+        :param bgc: background color
+        :type text: str
+        :type font: pygame.Font
+        :type pos: (int, int)
+        :type center: (int, int)
+        :type lambda_f:
+        :type bgc: (int, int, int)
+        """
         text = font.render(text, True, (255, 255, 255))
 
         if center:
             pos = text.get_rect(center=center)
         elif lambda_f:
             text_rect = text.get_rect()
-            pos = lambda_f(text_rect.width, text_rect.height)
+            pos = lambda_f(text_rect.width, text_rect.height)  # pass width and height to the lambda
 
-        if bgc:
+        if bgc:  # Draw background rectangle
             rect = pygame.Rect(0, 0, 433, 78)
 
             if center:
@@ -448,49 +505,11 @@ class Gui:
 
         self.screen.blit(text, pos)
 
-    def load_welcome_screen(self) -> None:
+    def ask_for_match(self) -> None:
         """
-        Load welcome screen.
-        """
-
-        self.state = "welcome"
-
-        #   Welcome screen:
-        print("Loading welcome screen...")
-        welcome_bg = pygame.image.load("assets/pictures/welcome.png")
-        self.screen.blit(welcome_bg, (0, 0))
-
-        #   Load credit text:
-        font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
-        text = font.render(hebrew_proof("מרטין אלבצאו"), True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
-        self.screen.blit(text, (900, 680))
-
-        print("Loaded. Waiting for user...")
-
-    def load_topics_screen(self) -> None:
-        """
-        Load topics screen.
+        Establish connection with server and ask for match.
         """
 
-        print("Loading topics screen...")
-        sc = pygame.image.load("assets/pictures/topics.png")
-        self.screen.blit(sc, (0, 0))
-        self.state = "topics"
-        print("Loaded. Waiting for user...")
-
-    def handle_mouse_click_on_topic(self) -> None:
-        pos = pygame.mouse.get_pos()
-
-        if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
-            self.load_welcome_screen()
-
-        else:
-            self.topic = click_in_bounds(pos)
-
-            if self.topic:
-                self.ask_for_match()
-
-    def ask_for_match(self):
         print(f"Loading match screen for topic {self.topic}...")
         self.state = "match"
         self.load_video("assets/videos/match.mp4")
@@ -511,17 +530,6 @@ class Gui:
         # Start another thread to handle connection and update counter
         self.conn_t = MatchThread(self, self.sock, msg)
         self.conn_t.start()
-
-    def handle_mouse_click_on_match(self):
-        x, y = pygame.mouse.get_pos()
-
-        if 478 < x < 602 and 633 < y < 677:  # If user clicked on cancel button
-            # Stop looking for a match and alert the server
-            self.conn_t.stop()
-
-            # Load topics screen
-            self.stop_video()
-            self.load_topics_screen()
 
     def load_next_question(self, rsp) -> None:
         """
@@ -584,18 +592,41 @@ class Gui:
         for p in self.play_on_vid.items():
             self.screen.blit(p[1][0], p[1][1])
 
-    def handle_mouse_click_on_welcome(self):
-        x, y = pygame.mouse.get_pos()
+    def load_welcome_screen(self) -> None:
+        """
+        Load welcome screen.
+        """
 
-        if y > 658 and x < 124:  # Clicked on one of the buttons
-            if x < 63:  # Settings button
-                self.load_settings_screen()
-            else:  # Credits button
-                self.load_credits_screen()
-        else:
-            self.load_topics_screen()
+        self.state = "welcome"
+
+        #   Welcome screen:
+        print("Loading welcome screen...")
+        welcome_bg = pygame.image.load("assets/pictures/welcome.png")
+        self.screen.blit(welcome_bg, (0, 0))
+
+        #   Load credit text:
+        font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
+        text = font.render(hebrew_proof("מרטין אלבצאו"), True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
+        self.screen.blit(text, (900, 680))
+
+        print("Loaded. Waiting for user...")
+
+    def load_topics_screen(self) -> None:
+        """
+        Load topics screen.
+        """
+
+        print("Loading topics screen...")
+        sc = pygame.image.load("assets/pictures/topics.png")
+        self.screen.blit(sc, (0, 0))
+        self.state = "topics"
+        print("Loaded. Waiting for user...")
 
     def load_credits_screen(self):
+        """
+        Load credits screen.
+        """
+
         print("Loading credits screen...")
         sc = pygame.image.load("assets/pictures/credits.png")
         self.screen.blit(sc, (0, 0))
@@ -603,6 +634,10 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def load_sharon_screen(self):
+        """
+        Load sharon easter egg screen.
+        """
+
         print("Loading sharon screen...")
         sc = pygame.image.load("assets/pictures/sharon.png")
         self.screen.blit(sc, (0, 0))
@@ -610,6 +645,10 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def load_settings_screen(self):
+        """
+        Load settings screen.
+        """
+
         print("Loading settings screen...")
         sc = pygame.image.load("assets/pictures/settings.png")
         self.screen.blit(sc, (0, 0))
@@ -627,6 +666,10 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def handle_name_typing(self, event):
+        """
+        Handle typing event on name textbox.
+        """
+
         if event.key == pygame.K_BACKSPACE:
             self.namemgr.value = self.namemgr.value[:-1]
             self.namemgr.blit()
@@ -646,6 +689,10 @@ class Gui:
             self.screen.blit(text, (900, 680))
 
     def handle_addr_typing(self, event):
+        """
+        Handle typing event on address textbox.
+        """
+
         if event.key == pygame.K_BACKSPACE:
             self.ipmgr.value = self.ipmgr.value[:-1]
             self.ipmgr.blit()
@@ -660,7 +707,26 @@ class Gui:
                                (228, 64, 50))  # Reverse string as a workaround for RTL bug
             self.screen.blit(text, (900, 680))
 
+    def handle_mouse_click_on_welcome(self):
+        """
+        Handle mouse click on welcome screen.
+        """
+
+        x, y = pygame.mouse.get_pos()
+
+        if y > 658 and x < 124:  # Clicked on one of the buttons
+            if x < 63:  # Settings button
+                self.load_settings_screen()
+            else:  # Credits button
+                self.load_credits_screen()
+        else:
+            self.load_topics_screen()
+
     def handle_mouse_click_on_settings(self):
+        """
+        Handle mouse click on settings screen.
+        """
+
         x, y = pygame.mouse.get_pos()
 
         if 577 < y < 648:
@@ -694,6 +760,10 @@ class Gui:
         self.ipmgr.dehighlight()
 
     def handle_mouse_click_on_credits(self):
+        """
+        Handle mouse click on credits screen.
+        """
+
         pos = pygame.mouse.get_pos()
         x, y = pos
 
@@ -704,12 +774,20 @@ class Gui:
             self.load_sharon_screen()
 
     def handle_mouse_click_on_sharon(self):
+        """
+        Handle mouse click on sharon screen.
+        """
+
         pos = pygame.mouse.get_pos()
 
         if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
             self.load_credits_screen()
 
     def handle_mouse_click_on_results(self):
+        """
+        Handle mouse click on results screen.
+        """
+
         x, y = pygame.mouse.get_pos()
 
         if self.state == "results-winner":
@@ -733,7 +811,45 @@ class Gui:
             elif 569 < x < 737 and 494 < y < 554:
                 self.load_welcome_screen()
 
-    def sumbit_answer(self, ans):
+    def handle_mouse_click_on_match(self):
+        """
+        Handle mouse click on match screen.
+        """
+
+        x, y = pygame.mouse.get_pos()
+
+        if 478 < x < 602 and 633 < y < 677:  # If user clicked on cancel button
+            # Stop looking for a match and alert the server
+            self.conn_t.stop()
+
+            # Load topics screen
+            self.stop_video()
+            self.load_topics_screen()
+
+    def handle_mouse_click_on_topic(self) -> None:
+        """
+        Handle mouse click on topic screen.
+        """
+
+        pos = pygame.mouse.get_pos()
+
+        if line_length(pos, (1023, 56)) <= 27:  # If user clicked on close button
+            self.load_welcome_screen()
+
+        else:
+            self.topic = click_in_bounds(pos)
+
+            if self.topic:
+                self.ask_for_match()
+
+    def sumbit_answer(self, ans) -> None:
+        """
+        Send answer to the server.
+
+        :param ans: chosen answer (1-4), 0 if none chosen
+        :type ans: int
+        """
+
         send_message(self.sock, SID, build_message("A", ans))  # Send answer to server
 
         if ans != 0:

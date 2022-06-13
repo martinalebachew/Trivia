@@ -74,6 +74,9 @@ class Question:
         self.c = c
 
     def randomize(self):
+        """
+        Randomize order of answers.
+        """
         new_c = randint(1, 4)
 
         # Using exec to swap old and new position of correct answer
@@ -233,7 +236,12 @@ def recv_message(sock, conn, timeout=TIMEOUT):
     return break_message(msg)
 
 
-def load_questions():
+def load_questions() -> dict[str, list[Question]]:
+    """
+    Loads all questions from ./questions directory
+    and returns a dict of questions by topic.
+    """
+
     questions = {topic: [] for topic in TOPICS}
 
     for topic in TOPICS:
