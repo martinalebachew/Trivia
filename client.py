@@ -635,13 +635,19 @@ class Gui:
             self.namemgr.value = self.namemgr.value[:-1]
             self.namemgr.blit()
 
-        elif (event.unicode.isalpha() or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:  # TODO: REPLACE SPACE WITH UNDERSCORE
+        elif (event.unicode in ascii_letters or event.unicode.isnumeric() or event.unicode == "_") and len(self.namemgr.value) < 12:
             self.namemgr.value += event.unicode
             self.namemgr.blit()
 
+        elif event.key == pygame.K_SPACE:
+            self.namemgr.value += "_"
+            self.namemgr.blit()
+
         else:
-            # TODO: DISPLAY MSG
-            pass
+            font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
+            text = font.render(hebrew_proof("הזנת תו שגוי"), True,
+                               (228, 64, 50))  # Reverse string as a workaround for RTL bug
+            self.screen.blit(text, (900, 680))  # TODO: CLEAR AFTER 1 SEC
 
     def handle_addr_typing(self, event):
         if event.key == pygame.K_BACKSPACE:
@@ -653,8 +659,10 @@ class Gui:
             self.ipmgr.blit()
 
         else:
-            # TODO: DISPLAY MSG
-            pass
+            font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
+            text = font.render(hebrew_proof("הזנת תו שגוי"), True,
+                               (228, 64, 50))  # Reverse string as a workaround for RTL bug
+            self.screen.blit(text, (900, 680))  # TODO: CLEAR AFTER 1 SEC
 
     def handle_mouse_click_on_settings(self):
         x, y = pygame.mouse.get_pos()
