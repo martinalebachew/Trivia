@@ -347,6 +347,10 @@ class Gui:
         self.large_header_font = pygame.font.Font("assets/fonts/Ploni/Demibold.ttf", 100)
 
         self.load_welcome_screen()
+        pygame.mixer.init()
+        pygame.mixer.music.load('assets/sound/theme.mp3')
+        pygame.mixer.music.play(-1)  # Play indefinitely
+        self.music_paused = False
 
     def raise_error(self) -> None:
         """
@@ -604,11 +608,6 @@ class Gui:
         welcome_bg = pygame.image.load("assets/pictures/welcome.png")
         self.screen.blit(welcome_bg, (0, 0))
 
-        #   Load credit text:
-        font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
-        text = font.render(hebrew_proof("מרטין אלבצאו"), True, (255, 255, 255))  # Reverse string as a workaround for RTL bug
-        self.screen.blit(text, (900, 680))
-
         print("Loaded. Waiting for user...")
 
     def load_topics_screen(self) -> None:
@@ -714,11 +713,21 @@ class Gui:
 
         x, y = pygame.mouse.get_pos()
 
-        if y > 658 and x < 124:  # Clicked on one of the buttons
-            if x < 63:  # Settings button
-                self.load_settings_screen()
-            else:  # Credits button
-                self.load_credits_screen()
+        if y > 658:
+            if x < 124:
+                if x < 63:  # Settings button
+                    self.load_settings_screen()
+                else:  # Credits button
+                    self.load_credits_screen()
+
+            elif x >= 1018:  # Sound button
+                if self.music_paused:
+                    self.music_paused = False
+                    pygame.mixer.music.unpause()
+                else:
+                    self.music_paused = True
+                    pygame.mixer.music.pause()
+
         else:
             self.load_topics_screen()
 
