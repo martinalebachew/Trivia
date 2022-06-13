@@ -5,7 +5,7 @@
 
 import socket
 import threading
-from random import randint, random
+from random import randint
 
 # Protocol-wide settings
 PORT = 15999  # Protocol port
