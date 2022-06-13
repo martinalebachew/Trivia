@@ -234,9 +234,7 @@ class MatchThread(StoppableThread):
 
         while retry:
             send_message(self.sock, SID, self.msg)
-            rsp = recv_message(self.sock, SID, 2 * TIMEOUT)
-            # TODO: FIX TIMEOUT
-            # TODO: STUCK IN RECV
+            rsp = recv_message(self.sock, SID, TIMEOUT)
 
             if rsp.code == "Q":
                 retry = False
@@ -391,7 +389,6 @@ class Gui:
         self.chosen_ans = False
 
         # Load text
-        # TODO: FIX HEBREW RTL WORKAROUND
         self.load_question_text(str(ANS), self.timer_font, center=(971, 183))
         self.load_question_text(hebrew_proof(f"משחק נגד {self.against}"), self.header_font, lambda_f=lambda w, h: (1011-w, 60))
         self.load_question_text(hebrew_proof(f"{self.qc}/{GL}"), self.header_font, pos=(69, 60))
@@ -630,7 +627,6 @@ class Gui:
         print("Loaded. Waiting for user...")
 
     def handle_name_typing(self, event):
-        # TODO: ADD SAME NAME VAL. IN SERVER
         if event.key == pygame.K_BACKSPACE:
             self.namemgr.value = self.namemgr.value[:-1]
             self.namemgr.blit()
@@ -647,14 +643,14 @@ class Gui:
             font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 32)
             text = font.render(hebrew_proof("הזנת תו שגוי"), True,
                                (228, 64, 50))  # Reverse string as a workaround for RTL bug
-            self.screen.blit(text, (900, 680))  # TODO: CLEAR AFTER 1 SEC
+            self.screen.blit(text, (900, 680))
 
     def handle_addr_typing(self, event):
         if event.key == pygame.K_BACKSPACE:
             self.ipmgr.value = self.ipmgr.value[:-1]
             self.ipmgr.blit()
 
-        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:  # TODO: REPLACE SPACE WITH UNDERSCORE
+        elif (event.unicode.isnumeric() or event.unicode == ".") and len(self.ipmgr.value) < 15:
             self.ipmgr.value += event.unicode
             self.ipmgr.blit()
 
@@ -662,7 +658,7 @@ class Gui:
             font = pygame.font.Font("assets/fonts/Ploni/Regular.ttf", 40)
             text = font.render(hebrew_proof("הזנת תו שגוי"), True,
                                (228, 64, 50))  # Reverse string as a workaround for RTL bug
-            self.screen.blit(text, (900, 680))  # TODO: CLEAR AFTER 1 SEC
+            self.screen.blit(text, (900, 680))
 
     def handle_mouse_click_on_settings(self):
         x, y = pygame.mouse.get_pos()
@@ -746,7 +742,6 @@ class Gui:
 
         # Wait for the next question / game results
         rsp = recv_message(self.sock, SID, timeout=TIMEOUT + ANS)
-        # TODO: FIX TIMEOUT
 
         if ans != 0:
             results_ptr = 5 if rsp.code == "Q" else 1

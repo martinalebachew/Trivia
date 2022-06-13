@@ -139,7 +139,7 @@ def recv_f(tid, target, correct) -> None:
     msg = recv_message(target.sock, target.cid, timeout=TIMEOUT + ANS)
     if int(msg.fields[0]) == correct:
         with lock:
-            score[tid][target.cid] += 1  # TODO: TIME-BASED SCORE
+            score[tid][target.cid] += 1
 
 
 def add_to_waitlist(topic, client) -> None:
