@@ -350,7 +350,8 @@ class Gui:
         pygame.mixer.init()
         pygame.mixer.music.load('assets/sound/theme.mp3')
         pygame.mixer.music.play(-1)  # Play indefinitely
-        self.music_paused = False
+        pygame.mixer.music.pause()
+        self.music_paused = True
 
     def raise_error(self) -> None:
         """
